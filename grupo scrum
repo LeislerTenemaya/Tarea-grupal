@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar U. - Cafetería UNEMI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuente Inter de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome para iconografía clara y accesible -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        }
+        /* Ocultar barras de desplazamiento internas manteniendo la funcionalidad */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Animación suave para modales y notificaciones */
+        @keyframes popIn {
+            0% { transform: scale(0.92); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-0 sm:p-4 text-slate-800 select-none">
+
+    <!-- Contenedor Principal estilo Teléfono Móvil (en escritorio se centra como mockup móvil) -->
+    <div id="phone-frame" class="w-full sm:w-[400px] h-screen sm:h-[810px] bg-white sm:rounded-[2.75rem] sm:border-[10px] sm:border-slate-900 shadow-2xl flex flex-col overflow-hidden relative">
+
+        <!-- Notch superior decorativo en vista de escritorio -->
+        <div class="hidden sm:block w-36 h-6 bg-slate-900 rounded-b-2xl mx-auto absolute top-0 left-1/2 -translate-x-1/2 z-30"></div>
+
+        <!-- Barra de Estado Móvil (Estilo "Claro" + Hora dinámica, igual al boceto pág. 5) -->
+        <header class="bg-white pt-3 sm:pt-2 px-6 pb-2 flex items-center justify-between text-xs font-semibold text-slate-700 z-20 border-b border-slate-100">
+            <div class="flex items-center gap-1.5">
+                <span class="font-bold tracking-tight text-slate-800">Claro</span>
+                <i class="fa-solid fa-signal text-[10px] text-slate-600"></i>
+                <i class="fa-solid fa-wifi text-[10px] text-slate-600"></i>
+            </div>
+            <div id="status-clock" class="font-bold text-slate-800">12:00</div>
+            <div class="flex items-center gap-1">
+                <span class="text-[10px]">100%</span>
+                <i class="fa-solid fa-battery-full text-emerald-600 text-sm"></i>
+            </div>
+        </header>
+
+        <!-- Toast / Confirmación visual flotante ("✓ Producto Agregado" - Mejora Sprint Review pág. 7) -->
+        <div id="toast-notification" class="pointer-events-none fixed sm:absolute top-14 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 opacity-0 -translate-y-3 w-[88%]">
+            <div class="bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-lg flex items-center justify-center gap-2.5 text-sm font-bold border border-emerald-400">
+                <i class="fa-solid fa-circle-check text-lg"></i>
+                <span id="toast-message">✓ Producto Agregado</span>
+            </div>
+        </div>
+
+        <!-- Cabecera de la App "Bar U." -->
+        <div class="px-5 pt-4 pb-3 bg-white flex items-start justify-between border-b border-slate-100">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-3xl font-extrabold tracking-tight text-orange-600">Bar U.</h1>
+                    <span class="bg-blue-900 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full tracking-wide uppercase shadow-sm">UNEMI</span>
+                </div>
+                <p id="header-subtitle" class="text-slate-600 font-medium text-sm mt-0.5">Selecciona tu pedido.</p>
+            </div>
+            <!-- Botón discreto Info Scrum - UNEMI para evaluación docente -->
+            <button onclick="openScrumModal()" title="Información del Proyecto Scrum" class="p-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-800 transition flex items-center gap-1.5 text-xs font-semibold border border-slate-200">
+                <i class="fa-solid fa-circle-info text-blue-700"></i>
+                <span>Scrum</span>
+            </button>
+        </div>
+
+        <!-- Área Principal de Contenido Dinámico (Scrollable) -->
+        <main class="flex-1 overflow-y-auto no-scrollbar bg-slate-50/70 p-4 pb-24">
+
+            <!-- ================= VISTA 1: PANTALLA DEL MENÚ ================= -->
+            <section id="view-menu" class="space-y-3.5">
+                <!-- Encabezado de sección y filtro rápido -->
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <i class="fa-solid fa-utensils text-orange-500"></i> MENÚ DEL DÍA
+                    </span>
+                    <button onclick="loadSketchPreset()" class="text-[11px] font-semibold text-orange-600 hover:underline">
+                        Cargar ejemplo boceto ($2.50)
+                    </button>
+                </div>
+
+                <!-- Contenedor de tarjetas de productos (renderizado vía JS) -->
+                <div id="menu-list" class="space-y-3">
+                    <!-- Los productos del boceto se inyectan aquí -->
+                </div>
+            </section>
+
+            <!-- ================= VISTA 2: INTERFAZ DEL CARRITO ("Añadidos al carrito.") ================= -->
+            <section id="view-cart" class="hidden space-y-4">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-extrabold text-emerald-900 text-base leading-tight">Añadidos al carrito.</h2>
+                            <p class="text-xs text-emerald-700">Verifica o edita tus productos</p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('menu')" class="text-xs font-bold text-emerald-800 bg-white px-3 py-1.5 rounded-xl border border-emerald-200 hover:bg-emerald-100 transition">
+                        + Seguir pidiendo
+                    </button>
+                </div>
+
+                <!-- Tabla estilo boceto: Columnas "Pedidos" y "Valor" -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="grid grid-cols-12 bg-orange-500 text-white text-xs font-extrabold uppercase tracking-wider px-4 py-2.5">
+                        <div class="col-span-7">Pedidos</div>
+                        <div class="col-span-5 text-right">Valor</div>
+                    </div>
+
+                    <!-- Lista de ítems en el carrito -->
+                    <div id="cart-items-container" class="divide-y divide-slate-100">
+                        <!-- Ítems dinámicos -->
+                    </div>
+
+                    <!-- Estado vacío del carrito -->
+                    <div id="cart-empty-state" class="hidden py-10 px-6 text-center space-y-3">
+                        <div class="w-14 h-14 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto text-2xl">
+                            <i class="fa-solid fa-basket-shopping"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Tu carrito está vacío</p>
+                        <p class="text-xs text-slate-400">Agrega productos desde el menú para realizar tu pedido en la cafetería.</p>
+                        <button onclick="switchTab('menu')" class="mt-2 bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-orange-700 transition">
+                            Ir al Menú
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Caja de Total y Botón "Realizar pedido" (como el recuadro celeste del boceto pág. 5) -->
+                <div id="cart-checkout-box" class="bg-cyan-50 border-2 border-cyan-300 rounded-2xl p-4 space-y-3 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-slate-700">Total a pagar al retirar:</span>
+                        <span id="cart-total-display" class="text-2xl font-extrabold text-slate-900">$0.00</span>
+                    </div>
+                    <p class="text-[11px] text-cyan-800 flex items-center gap-1.5 bg-cyan-100/70 px-3 py-1.5 rounded-xl">
+                        <i class="fa-solid fa-store text-cyan-700"></i>
+                        <span>Sin pago en línea: pagas directamente en cafetería al retirar.</span>
+                    </p>
+                    <button onclick="submitOrder()" class="w-full py-3.5 px-5 bg-cyan-600 hover:bg-cyan-700 active:scale-[0.99] text-white font-extrabold text-base rounded-2xl shadow-md transition flex items-center justify-center gap-2">
+                        <span>Realizar pedido</span>
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Barra de Navegación Inferior con acceso rápido al carrito y contador dinámico -->
+        <nav class="bg-white border-t border-slate-200 px-6 py-2.5 flex items-center justify-around z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+            <button id="nav-btn-menu" onclick="switchTab('menu')" class="flex flex-col items-center gap-1 py-1 px-4 rounded-2xl text-orange-600 font-bold transition">
+                <i class="fa-solid fa-burger text-lg"></i>
+                <span class="text-[11px]">Menú</span>
+            </button>
+
+            <!-- Ícono del carrito con contador circular dinámico (inspirado en el boceto pág. 5) -->
+            <button id="nav-btn-cart" onclick="switchTab('cart')" class="relative flex flex-col items-center gap-1 py-1 px-4 rounded-2xl text-slate-500 hover:text-orange-600 font-bold transition">
+                <div class="relative">
+                    <i class="fa-solid fa-cart-shopping text-xl"></i>
+                    <span id="cart-badge" class="absolute -top-2 -right-3 bg-emerald-600 text-white text-[11px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center shadow border-2 border-white">
+                        0
+                    </span>
+                </div>
+                <span class="text-[11px]">Carrito</span>
+            </button>
+        </nav>
+
+        <!-- ================= MODAL 1: DETALLES DEL PRODUCTO (Historia #2) ================= -->
+        <div id="product-modal" class="hidden fixed sm:absolute inset-0 bg-slate-900/60 backdrop-blur-xs z-40 flex items-end sm:items-center justify-center p-4">
+            <div class="bg-white w-full rounded-3xl p-5 shadow-2xl animate-pop space-y-4 border border-slate-100">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3">
+                        <div id="modal-prod-icon" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-3xl shadow-inner">
+                            🍗
+                        </div>
+                        <div>
+                            <span id="modal-prod-category" class="inline-block bg-amber-100 text-amber-800 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full mb-1">
+                                Almuerzo
+                            </span>
+                            <h3 id="modal-prod-name" class="text-xl font-extrabold text-slate-900">Seco de pollo</h3>
+                        </div>
+                    </div>
+                    <button onclick="closeProductModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-1.5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Contenido y detalles:</p>
+                    <p id="modal-prod-desc" class="text-sm text-slate-700 leading-relaxed">
+                        Arroz amarillo, presa de pollo jugosa, maduro frito y ensalada fresca.
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                    <div>
+                        <span class="text-xs text-slate-500 block">Precio unitario</span>
+                        <span id="modal-prod-price" class="text-2xl font-extrabold text-orange-600">$1.50</span>
+                    </div>
+                    <button id="modal-add-btn" class="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-sm rounded-2xl shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-cart-plus"></i>
+                        <span>Añadir al carro</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL 2: CONFIRMACIÓN DEL PEDIDO (Historia #4) ================= -->
+        <div id="order-modal" class="hidden fixed sm:absolute inset-0 bg-slate-900/65 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full rounded-3xl p-6 shadow-2xl animate-pop text-center space-y-4 border border-slate-100">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-sm">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        Pedido #<span id="order-number">104</span> Confirmado
+                    </span>
+                    <h3 class="text-xl font-extrabold text-slate-900 mt-2">¡Pedido enviado a cafetería!</h3>
+                    <p class="text-xs text-slate-500 mt-1">Cafetería Central - Universidad Estatal de Milagro (UNEMI)</p>
+                </div>
+
+                <!-- Resumen del pedido confirmado -->
+                <div id="order-summary-box" class="bg-slate-50 rounded-2xl p-3.5 text-left text-xs space-y-1.5 border border-slate-200 max-h-40 overflow-y-auto">
+                    <!-- Detalle del pedido -->
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-left flex items-start gap-2.5">
+                    <i class="fa-solid fa-money-bill-wave text-amber-600 mt-0.5"></i>
+                    <p class="text-xs text-amber-900 font-medium">
+                        <strong>Recuerda:</strong> No hay pago en línea. Cancelas el total (<strong id="order-modal-total">$0.00</strong>) directamente al retirar tu orden en barra.
+                    </p>
+                </div>
+
+                <button onclick="finishOrderAndReset()" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-2xl shadow transition">
+                    Entendido, volver al menú
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= MODAL 3: INFO SCRUM - UNEMI (Documentación del Taller) ================= -->
+        <div id="scrum-modal" class="hidden fixed sm:absolute inset-0 bg-slate-900/65 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div class="bg-white w-full max-h-[88%] rounded-3xl p-5 shadow-2xl animate-pop flex flex-col border border-slate-200">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-full">UNEMI • Ing. de Software</span>
+                        <h3 class="text-lg font-extrabold text-slate-900 mt-1">Taller Grupal Scrum - Bar U.</h3>
+                    </div>
+                    <button onclick="closeScrumModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="overflow-y-auto no-scrollbar py-3 space-y-4 text-xs text-slate-700">
+                    <!-- Equipo Scrum -->
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
+                        <h4 class="font-extrabold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                            <i class="fa-solid fa-users text-blue-700"></i> Equipo Scrum
+                        </h4>
+                        <p><strong>Scrum Master:</strong> Alvarado Paladines Sergio Leonel</p>
+                        <p><strong>Product Owner:</strong> Palma Saltos Erick José</p>
+                        <p><strong>Developer:</strong> Tenemaya Yunga Leisler Hamilton</p>
+                        <p class="text-[11px] text-slate-500 pt-1">Docente: Ing. Denis Mendoza • Milagro, Ecuador</p>
+                    </div>
+
+                    <!-- Alcance Sprint 1 -->
+                    <div class="space-y-1.5">
+                        <h4 class="font-extrabold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-check text-orange-600"></i> Historias del Sprint 1 (18 pts / 36h)
+                        </h4>
+                        <ul class="space-y-1 pl-4 list-disc text-slate-600">
+                            <li><strong>HU1:</strong> Consultar el menú disponible del día.</li>
+                            <li><strong>HU2:</strong> Ver precios y detalles del contenido de cada producto.</li>
+                            <li><strong>HU3:</strong> Agregar productos al carrito y editar cantidades.</li>
+                            <li><strong>HU4:</strong> Realizar pedido para evitar filas (pago al retirar).</li>
+                        </ul>
+                    </div>
+
+                    <!-- Mejoras del Sprint Review -->
+                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 space-y-1">
+                        <h4 class="font-extrabold text-emerald-900 uppercase text-[11px] flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-emerald-600"></i> Mejoras del Sprint Review (Pág. 7)
+                        </h4>
+                        <p class="text-emerald-800">• Botón <strong>"Añadir al carro"</strong> ampliado para evitar errores táctiles.</p>
+                        <p class="text-emerald-800">• Confirmación visual inmediata <strong>"✓ Producto Agregado"</strong>.</p>
+                        <p class="text-emerald-800">• Categorización horaria (Almuerzo / Todo el día).</p>
+                    </div>
+                </div>
+
+                <button onclick="closeScrumModal()" class="mt-2 w-full py-2.5 bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs rounded-2xl transition">
+                    Cerrar información
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * BASE DE DATOS DE PRODUCTOS (Simplificada según Sprint Review pág. 7 y Boceto pág. 5)
+         * Incluye los 4 productos exactos del prototipo con precios, detalles y disponibilidad horaria.
+         */
+        const MENU_PRODUCTS = [
+            {
+                id: 1,
+                name: "Seco de pollo",
+                price: 1.50,
+                category: "Almuerzo",
+                categoryColor: "bg-amber-100 text-amber-800",
+                description: "Arroz amarillo, presa de pollo jugosa, maduro frito y ensalada fresca.",
+                emoji: "🍗"
+            },
+            {
+                id: 2,
+                name: "Pizza",
+                price: 1.00,
+                category: "Todo el día",
+                categoryColor: "bg-blue-100 text-blue-800",
+                description: "Porción personal de pizza artesanal con queso mozzarella, salsa de tomate y pepperoni.",
+                emoji: "🍕"
+            },
+            {
+                id: 3,
+                name: "Jugo de mora",
+                price: 0.50,
+                category: "Todo el día",
+                categoryColor: "bg-blue-100 text-blue-800",
+                description: "Vaso frío de jugo natural de mora recién preparado.",
+                emoji: "🥤"
+            },
+            {
+                id: 4,
+                name: "Botella de agua",
+                price: 0.50,
+                category: "Todo el día",
+                categoryColor: "bg-blue-100 text-blue-800",
+                description: "Botella de agua purificada sin gas de 500ml.",
+                emoji: "💧"
+            }
+        ];
+
+        // Estado del carrito de compras (inicia con los 3 ítems del boceto de la página 5 para demostración inmediata, o editable)
+        let cart = [
+            { productId: 1, quantity: 1 }, // Seco de pollo $1.50
+            { productId: 3, quantity: 1 }, // Jugo de mora $0.50
+            { productId: 4, quantity: 1 }  // Botella de agua $0.50 -> Total = $2.50
+        ];
+
+        let toastTimeout = null;
+        let orderCounter = 101;
+
+        /**
+         * Inicializa la aplicación al cargar el DOM
+         */
+        document.addEventListener("DOMContentLoaded", () => {
+            updateClock();
+            setInterval(updateClock, 15000);
+            renderMenu();
+            updateCartUI();
+        });
+
+        /**
+         * Actualiza el reloj de la barra superior estilo celular
+         */
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById("status-clock").textContent = `${hours}:${minutes}`;
+        }
+
+        /**
+         * Renderiza la lista de productos en la pantalla del menú (Historia #1 y #2)
+         */
+        function renderMenu() {
+            const menuContainer = document.getElementById("menu-list");
+            menuContainer.innerHTML = "";
+
+            MENU_PRODUCTS.forEach(product => {
+                const inCartItem = cart.find(item => item.productId === product.id);
+                const isAdded = Boolean(inCartItem);
+
+                const card = document.createElement("div");
+                card.className = "bg-white rounded-2xl p-3.5 border border-slate-200/90 shadow-xs hover:shadow-md transition flex flex-col gap-3";
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3.5">
+                        <!-- Vista previa ilustrada del producto (clic abre detalles) -->
+                        <button onclick="openProductModal(${product.id})" class="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-3xl shrink-0 hover:scale-105 transition" title="Ver detalles de ${product.name}">
+                            ${product.emoji}
+                        </button>
+
+                        <!-- Nombre, categoría y precio -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 onclick="openProductModal(${product.id})" class="font-extrabold text-slate-900 text-base truncate cursor-pointer hover:text-orange-600 transition">
+                                    ${product.name}
+                                </h3>
+                                <span class="font-extrabold text-orange-600 text-base shrink-0">
+                                    $${product.price.toFixed(2)}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${product.categoryColor}">
+                                    ${product.category}
+                                </span>
+                                <button onclick="openProductModal(${product.id})" class="text-xs font-semibold text-blue-700 hover:underline flex items-center gap-1">
+                                    <i class="fa-solid fa-eye text-[10px]"></i> Ver detalles
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón grande y accesible "Añadir al carro" (Mejora Sprint Review pág. 7) -->
+                    <button id="add-btn-${product.id}" onclick="addToCart(${product.id})"
+                        class="w-full py-2.5 px-4 rounded-xl font-bold text-sm transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-xs
+                        ${isAdded
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'}">
+                        <i class="fa-solid ${isAdded ? 'fa-check' : 'fa-plus'}"></i>
+                        <span>${isAdded ? `Añadido al carro (${inCartItem.quantity})` : 'Añadir al carro'}</span>
+                    </button>
+                `;
+
+                menuContainer.appendChild(card);
+            });
+        }
+
+        /**
+         * Agrega un producto al carrito y dispara la confirmación visual (Historia #3 + Sprint Review)
+         */
+        function addToCart(productId) {
+            const product = MENU_PRODUCTS.find(p => p.id === productId);
+            if (!product) return;
+
+            const existingItem = cart.find(item => item.productId === productId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ productId: productId, quantity: 1 });
+            }
+
+            // Confirmación visual inmediata ("✓ Producto Agregado")
+            showToast(`✓ Producto Agregado: ${product.name}`);
+
+            // Actualizar vistas
+            renderMenu();
+            updateCartUI();
+
+            // Efecto temporal en el botón presionado
+            const btn = document.getElementById(`add-btn-${productId}`);
+            if (btn) {
+                btn.classList.remove("bg-emerald-100", "text-emerald-800");
+                btn.classList.add("bg-emerald-600", "text-white");
+                btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>✓ Producto Agregado</span>`;
+                setTimeout(() => {
+                    renderMenu();
+                }, 850);
+            }
+        }
+
+        /**
+         * Modifica la cantidad de un ítem en el carrito (+1 / -1)
+         */
+        function updateQuantity(productId, delta) {
+            const index = cart.findIndex(item => item.productId === productId);
+            if (index === -1) return;
+
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+
+            renderMenu();
+            updateCartUI();
+        }
+
+        /**
+         * Actualiza la vista del carrito ("Añadidos al carrito."), contador y cálculo total
+         */
+        function updateCartUI() {
+            const badge = document.getElementById("cart-badge");
+            const container = document.getElementById("cart-items-container");
+            const emptyState = document.getElementById("cart-empty-state");
+            const checkoutBox = document.getElementById("cart-checkout-box");
+            const totalDisplay = document.getElementById("cart-total-display");
+
+            const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+            badge.textContent = totalItems;
+
+            if (cart.length === 0) {
+                container.innerHTML = "";
+                emptyState.classList.remove("hidden");
+                checkoutBox.classList.add("hidden");
+                totalDisplay.textContent = "$0.00";
+                return;
+            }
+
+            emptyState.classList.add("hidden");
+            checkoutBox.classList.remove("hidden");
+            container.innerHTML = "";
+
+            let totalAmount = 0;
+
+            cart.forEach(item => {
+                const product = MENU_PRODUCTS.find(p => p.id === item.productId);
+                if (!product) return;
+
+                const subtotal = product.price * item.quantity;
+                totalAmount += subtotal;
+
+                const row = document.createElement("div");
+                row.className = "grid grid-cols-12 items-center px-4 py-3 text-sm hover:bg-slate-50 transition";
+
+                row.innerHTML = `
+                    <div class="col-span-7 flex items-center gap-2.5 pr-2">
+                        <span class="text-xl">${product.emoji}</span>
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-800 truncate">${product.name}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <button onclick="updateQuantity(${product.id}, -1)" class="w-6 h-6 rounded-lg bg-slate-200 hover:bg-rose-100 hover:text-rose-700 font-bold text-xs flex items-center justify-center transition" aria-label="Disminuir">
+                                    -
+                                </button>
+                                <span class="text-xs font-extrabold text-slate-700 w-4 text-center">${item.quantity}</span>
+                                <button onclick="updateQuantity(${product.id}, 1)" class="w-6 h-6 rounded-lg bg-slate-200 hover:bg-emerald-100 hover:text-emerald-700 font-bold text-xs flex items-center justify-center transition" aria-label="Aumentar">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-5 text-right">
+                        <span class="font-extrabold text-slate-900 text-base">$${subtotal.toFixed(2)}</span>
+                        <span class="block text-[10px] text-slate-400">($${product.price.toFixed(2)} c/u)</span>
+                    </div>
+                `;
+
+                container.appendChild(row);
+            });
+
+            totalDisplay.textContent = `$${totalAmount.toFixed(2)}`;
+        }
+
+        /**
+         * Carga exactamente los 3 productos del boceto de la página 5 ($2.50)
+         */
+        function loadSketchPreset() {
+            cart = [
+                { productId: 1, quantity: 1 },
+                { productId: 3, quantity: 1 },
+                { productId: 4, quantity: 1 }
+            ];
+            renderMenu();
+            updateCartUI();
+            showToast("✓ Ejemplo del boceto cargado ($2.50)");
+        }
+
+        /**
+         * Cambia entre la vista de Menú y la vista de Carrito
+         */
+        function switchTab(tab) {
+            const viewMenu = document.getElementById("view-menu");
+            const viewCart = document.getElementById("view-cart");
+            const btnMenu = document.getElementById("nav-btn-menu");
+            const btnCart = document.getElementById("nav-btn-cart");
+            const subtitle = document.getElementById("header-subtitle");
+
+            if (tab === "menu") {
+                viewMenu.classList.remove("hidden");
+                viewCart.classList.add("hidden");
+                btnMenu.classList.add("text-orange-600");
+                btnMenu.classList.remove("text-slate-500");
+                btnCart.classList.remove("text-orange-600");
+                btnCart.classList.add("text-slate-500");
+                subtitle.textContent = "Selecciona tu pedido.";
+            } else {
+                viewMenu.classList.add("hidden");
+                viewCart.classList.remove("hidden");
+                btnCart.classList.add("text-orange-600");
+                btnCart.classList.remove("text-slate-500");
+                btnMenu.classList.remove("text-orange-600");
+                btnMenu.classList.add("text-slate-500");
+                subtitle.textContent = "Revisa y confirma tu orden.";
+                updateCartUI();
+            }
+        }
+
+        /**
+         * Abre el modal de detalles del producto (Historia #2)
+         */
+        function openProductModal(productId) {
+            const product = MENU_PRODUCTS.find(p => p.id === productId);
+            if (!product) return;
+
+            document.getElementById("modal-prod-icon").textContent = product.emoji;
+            document.getElementById("modal-prod-name").textContent = product.name;
+            document.getElementById("modal-prod-desc").textContent = product.description;
+            document.getElementById("modal-prod-price").textContent = `$${product.price.toFixed(2)}`;
+
+            const catBadge = document.getElementById("modal-prod-category");
+            catBadge.textContent = product.category;
+            catBadge.className = `inline-block text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full mb-1 ${product.categoryColor}`;
+
+            const addBtn = document.getElementById("modal-add-btn");
+            addBtn.onclick = () => {
+                addToCart(product.id);
+                closeProductModal();
+            };
+
+            document.getElementById("product-modal").classList.remove("hidden");
+        }
+
+        function closeProductModal() {
+            document.getElementById("product-modal").classList.add("hidden");
+        }
+
+        /**
+         * Procesa y confirma el pedido enviado a cafetería (Historia #4)
+         */
+        function submitOrder() {
+            if (cart.length === 0) return;
+
+            const summaryBox = document.getElementById("order-summary-box");
+            summaryBox.innerHTML = "";
+            let total = 0;
+
+            cart.forEach(item => {
+                const product = MENU_PRODUCTS.find(p => p.id === item.productId);
+                const sub = product.price * item.quantity;
+                total += sub;
+
+                const line = document.createElement("div");
+                line.className = "flex justify-between items-center text-slate-700";
+                line.innerHTML = `
+                    <span>${item.quantity}x ${product.name}</span>
+                    <span class="font-bold">$${sub.toFixed(2)}</span>
+                `;
+                summaryBox.appendChild(line);
+            });
+
+            document.getElementById("order-number").textContent = orderCounter++;
+            document.getElementById("order-modal-total").textContent = `$${total.toFixed(2)}`;
+            document.getElementById("order-modal").classList.remove("hidden");
+        }
+
+        /**
+         * Finaliza la confirmación, limpia el carrito y vuelve al menú
+         */
+        function finishOrderAndReset() {
+            document.getElementById("order-modal").classList.add("hidden");
+            cart = [];
+            renderMenu();
+            updateCartUI();
+            switchTab("menu");
+        }
+
+        /**
+         * Modales de Información Scrum (UNEMI)
+         */
+        function openScrumModal() {
+            document.getElementById("scrum-modal").classList.remove("hidden");
+        }
+
+        function closeScrumModal() {
+            document.getElementById("scrum-modal").classList.add("hidden");
+        }
+
+        /**
+         * Muestra notificación flotante verde estilo Toast
+         */
+        function showToast(message) {
+            const toast = document.getElementById("toast-notification");
+            document.getElementById("toast-message").textContent = message;
+
+            toast.classList.remove("opacity-0", "-translate-y-3");
+            toast.classList.add("opacity-100", "translate-y-0");
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove("opacity-100", "translate-y-0");
+                toast.classList.add("opacity-0", "-translate-y-3");
+            }, 1800);
+        }
+    </script>
+</body>
+</html>
